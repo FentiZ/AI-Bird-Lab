@@ -1,0 +1,26 @@
+{
+  "name": "bird-lab-chain",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "node": "hardhat node --hostname 0.0.0.0",
+    "deploy": "node scripts/deploy.cjs",
+    "start:gateway": "node server.cjs",
+    "test": "npm run test:gateway && npm run test:contract",
+    "test:gateway": "node --test tests/gateway.test.cjs tests/gateway.more.test.cjs tests/subscription.test.cjs tests/coverage-check.test.cjs",
+    "test:contract": "hardhat test test/BirdSubscription.test.js",
+    "coverage:gateway": "c8 --include=server.cjs --all --check-coverage --lines 90 --functions 90 --branches 90 --statements 90 --reporter=text --reporter=lcov node --test tests/gateway.test.cjs tests/gateway.more.test.cjs tests/subscription.test.cjs tests/coverage-check.test.cjs",
+    "coverage:solidity": "hardhat coverage --testfiles test/BirdSubscription.test.js && node scripts/check-coverage.cjs",
+    "test:coverage": "npm run coverage:gateway && npm run coverage:solidity"
+  },
+  "dependencies": {
+    "ethers": "6.13.5",
+    "express": "4.21.2",
+    "hardhat": "2.26.3",
+    "solc": "0.8.24"
+  },
+  "devDependencies": {
+    "solidity-coverage": "^0.8.17",
+    "c8": "^10.1.3"
+  }
+}

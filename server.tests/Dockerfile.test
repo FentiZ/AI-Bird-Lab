@@ -1,0 +1,8 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+WORKDIR /source
+COPY server/BirdLab.Api.csproj server/
+COPY server.tests/BirdLab.Tests.csproj server.tests/
+RUN dotnet restore server.tests/BirdLab.Tests.csproj
+COPY server/ server/
+COPY server.tests/ server.tests/
+CMD ["dotnet", "test", "server.tests/BirdLab.Tests.csproj", "-c", "Release", "--no-restore", "--logger", "console;verbosity=normal"]

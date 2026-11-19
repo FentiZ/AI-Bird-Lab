@@ -1,0 +1,10 @@
+FROM python:3.12-slim
+WORKDIR /source
+# Only lightweight test dependencies; no Torch or model download needed.
+RUN pip install --no-cache-dir fastapi==0.115.12 python-multipart==0.0.20 "pillow>=11,<13" pika==1.3.2 requests==2.32.3 "pytest>=8,<10" "pytest-cov>=6,<8" "httpx>=0.27,<1"
+COPY ai_service/ ./ai_service/
+COPY tools/ ./tools/
+COPY server/birds.json ./server/birds.json
+RUN mkdir -p /reports
+ENV PYTHONPATH=/source/ai_service:/source/tools
+CMD ["python", "-m", "pytest", "-q", "ai_service", "tools", "--cov=main", "--cov=worker", "--cov=download_15", "--cov-branch", "--cov-report=term-missing", "--cov-report=xml:/reports/python-coverage.xml", "--cov-fail-under=90"]

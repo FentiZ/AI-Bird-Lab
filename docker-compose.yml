@@ -1,0 +1,112 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "127.0.0.1:14333:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  chain:
+    build: ./chain
+    command: ["npm", "run", "node"]
+    ports:
+      - "127.0.0.1:8545:8545"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8545',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',method:'eth_chainId',params:[],id:1})}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+    restart: unless-stopped
+
+  chain-deploy:
+    build: ./chain
+    command: ["node", "scripts/deploy.cjs"]
+    environment:
+      CHAIN_RPC: http://chain:8545
+      DEPLOY_PRIVATE_KEY: ${DEPLOY_PRIVATE_KEY}
+    volumes:
+      - contract-data:/shared
+    depends_on:
+      chain:
+        condition: service_healthy
+    restart: "no"
+
+  chain-service:
+    build: ./chain
+    command: ["node", "server.cjs"]
+    environment:
+      CHAIN_RPC: http://chain:8545
+    volumes:
+      - contract-data:/shared:ro
+    depends_on:
+      chain-deploy:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  api:
+    build: ./server
+    environment:
+      ASPNETCORE_URLS: http://+:5080
+      ConnectionStrings__BirdLab: "Server=mssql,1433;Database=BirdLabDb;User ID=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
+      BlockchainServiceUrl: http://chain-service:3001
+      Rabbit__Host: rabbitmq
+      Rabbit__Username: ${RABBITMQ_USER}
+      Rabbit__Password: ${RABBITMQ_PASSWORD}
+      Auth__Key: ${API_SIGNING_KEY}
+      InternalWorkerKey: ${INTERNAL_WORKER_KEY}
+    ports:
+      - "0.0.0.0:5080:5080"
+    depends_on:
+      mssql:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      chain-service:
+        condition: service_started
+    restart: unless-stopped
+
+  ai:
+    build: ./ai_service
+    environment:
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/"
+      API_BASE_URL: http://api:5080
+      INTERNAL_WORKER_KEY: ${INTERNAL_WORKER_KEY}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  mssql-data:
+  contract-data:
+  hf-cache:

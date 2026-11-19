@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "AI Bird Lab",
+    "slug": "ai-bird-lab",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      ["expo-image-picker", {
+        "photosPermission": "Allow AI Bird Lab to select a bird photo",
+        "cameraPermission": "Allow AI Bird Lab to take bird photos",
+        "microphonePermission": false
+      }],
+      "expo-secure-store"
+    ],
+    "ios": { "supportsTablet": true },
+    "android": { "package": "com.example.aibirdlab" }
+  }
+}

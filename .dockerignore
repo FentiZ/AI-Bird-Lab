@@ -1,0 +1,12 @@
+**/node_modules/
+**/.expo/
+**/dist/
+**/bin/
+**/obj/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.git/
+**/.env
+.env
+**/*.pyc
